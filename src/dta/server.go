@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"io/ioutil"
 	"encoding/json"
+	"fmt"
 )
 
 func main() {
@@ -64,9 +65,18 @@ func main() {
 			Meta  map[string]int64 `json:"_meta"`
 		}
 
-		type Response struct {
+		type Error struct {
+			Message string `json:"message"`
+		}
+
+		type SuccessResponse struct {
 			Success bool `json:"success"`
 			Data    Data `json:"data"`
+		}
+
+		type FailResponse struct {
+			Success bool  `json:"success"`
+			Error   Error `json:"error"`
 		}
 
 		d := &Data{}
@@ -90,35 +100,47 @@ func main() {
 		var totalCount int64
 		q.Select("COUNT(*)").Row(&totalCount)
 		totalPages := (totalCount + pageSize - 1) / pageSize
-		rows, _ := q.Select("*").Offset((page - 1) * pageSize).Limit(pageSize).Rows()
-		for rows.Next() {
-			rows.ScanMap(row)
-			t := make(map[string]interface{})
-			for name, v := range row {
-				if fieldNameCamelFormat {
-					names := strings.Split(name, "_")
-					vv := make([]string, len(names))
-					for _, v := range names {
-						vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
+		rows, err := q.Select("*").Offset((page - 1) * pageSize).Limit(pageSize).Rows()
+		if err == nil {
+			for rows.Next() {
+				rows.ScanMap(row)
+				t := make(map[string]interface{})
+				for name, v := range row {
+					if fieldNameCamelFormat {
+						names := strings.Split(name, "_")
+						vv := make([]string, len(names))
+						for _, v := range names {
+							vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
+						}
+						name = strings.Join(vv, "")
 					}
-					name = strings.Join(vv, "")
+					t[name] = v.String
 				}
-				t[name] = v.String
+				d.Items = append(d.Items, t)
 			}
-			d.Items = append(d.Items, t)
-		}
 
-		d.Meta = map[string]int64{
-			"totalCount":  totalCount,
-			"pageCount":   totalPages,
-			"currentPage": page,
-			"perPage":     pageSize,
-		}
+			d.Meta = map[string]int64{
+				"totalCount":  totalCount,
+				"pageCount":   totalPages,
+				"currentPage": page,
+				"perPage":     pageSize,
+			}
+			resp := &SuccessResponse{
+				Success: true,
+				Data:    *d,
+			}
+			return c.Write(resp)
 
-		return c.Write(&Response{
-			Success: true,
-			Data:    *d,
-		})
+		} else {
+			error := &Error{
+				Message: fmt.Errorf("%v", err).Error(),
+			}
+			resp := &FailResponse{
+				Success: false,
+				Error:   *error,
+			}
+			return c.Write(resp)
+		}
 	})
 
 	http.Handle("/", router)
