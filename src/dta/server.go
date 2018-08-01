@@ -59,6 +59,19 @@ func main() {
 
 	// GET /api/TABLE_NAME?page=1&pageSize=100
 	api.Get(`/<table:\w+>`, func(c *routing.Context) error {
+		type Data struct {
+			Items []interface{}    `json:"items"`
+			Meta  map[string]int64 `json:"_meta"`
+		}
+
+		type Response struct {
+			Success bool `json:"success"`
+			Data    Data `json:"data"`
+		}
+
+		d := &Data{}
+		d.Items = make([]interface{}, 0)
+
 		page, _ := strconv.ParseInt(c.Query("page", "1"), 10, 64)
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
 		table := c.Param("table")
@@ -72,9 +85,12 @@ func main() {
 		}
 
 		fieldNameCamelFormat := strings.ToLower(cfg.FieldNameFormat) == "camel"
-		res := make([]interface{}, 0)
 		row := dbx.NullStringMap{}
-		rows, _ := db.Select().From(table).Offset((page - 1) * pageSize).Limit(pageSize).Rows()
+		q := db.Select().From(table)
+		var totalCount int64
+		q.Select("COUNT(*)").Row(&totalCount)
+		totalPages := (totalCount + pageSize - 1) / pageSize
+		rows, _ := q.Select("*").Offset((page - 1) * pageSize).Limit(pageSize).Rows()
 		for rows.Next() {
 			rows.ScanMap(row)
 			t := make(map[string]interface{})
@@ -89,9 +105,20 @@ func main() {
 				}
 				t[name] = v.String
 			}
-			res = append(res, t)
+			d.Items = append(d.Items, t)
 		}
-		return c.Write(res)
+
+		d.Meta = map[string]int64{
+			"totalCount":  totalCount,
+			"pageCount":   totalPages,
+			"currentPage": page,
+			"perPage":     pageSize,
+		}
+
+		return c.Write(&Response{
+			Success: true,
+			Data:    *d,
+		})
 	})
 
 	http.Handle("/", router)
