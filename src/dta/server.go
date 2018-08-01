@@ -12,9 +12,32 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"strings"
 	"strconv"
+	"io/ioutil"
+	"encoding/json"
 )
 
 func main() {
+	// Read and get app config
+	jsonFile, err := ioutil.ReadFile("src/dta/config/conf.json")
+	if err != nil {
+		panic("Read config file failed.")
+	}
+	cfg := struct {
+		Debug           bool
+		Driver          string
+		DSN             string
+		TablePrefix     string
+		FieldNameFormat string
+	}{
+		Debug:           true,
+		Driver:          "mysql",
+		FieldNameFormat: "original",
+	}
+	err = json.Unmarshal(jsonFile, &cfg)
+	if err != nil {
+		panic("Config file is invalid. Must be a valid json format.");
+	}
+
 	router := routing.New()
 	router.Use(
 		access.Logger(log.Printf),
@@ -27,7 +50,7 @@ func main() {
 		content.TypeNegotiator(content.JSON),
 	)
 
-	db, _ := dbx.Open("mysql", "root:root@/touch_admin_s")
+	db, _ := dbx.Open(cfg.Driver, cfg.DSN)
 
 	// GET /api/
 	api.Get("/", func(c *routing.Context) error {
@@ -43,13 +66,27 @@ func main() {
 		if len(table) == 0 {
 			panic("Table name is can't empty.")
 		}
-		res :=make([]interface{}, 0)
+
+		if len(cfg.TablePrefix) > 0 && !strings.HasPrefix(table, cfg.TablePrefix) {
+			table = cfg.TablePrefix + table
+		}
+
+		fieldNameCamelFormat := strings.ToLower(cfg.FieldNameFormat) == "camel"
+		res := make([]interface{}, 0)
 		row := dbx.NullStringMap{}
 		rows, _ := db.Select().From(table).Offset((page - 1) * pageSize).Limit(pageSize).Rows()
 		for rows.Next() {
 			rows.ScanMap(row)
 			t := make(map[string]interface{})
 			for name, v := range row {
+				if fieldNameCamelFormat {
+					names := strings.Split(name, "_")
+					vv := make([]string, len(names))
+					for _, v := range names {
+						vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
+					}
+					name = strings.Join(vv, "")
+				}
 				t[name] = v.String
 			}
 			res = append(res, t)

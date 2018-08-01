@@ -1,0 +1,7 @@
+{
+  "Debug": true,
+  "Driver": "mysql",
+  "DSN": "user:password@/db",
+  "TablePrefix": "",
+  "FieldNameFormat": "original"
+}
