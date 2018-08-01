@@ -79,9 +79,6 @@ func main() {
 			Error   Error `json:"error"`
 		}
 
-		d := &Data{}
-		d.Items = make([]interface{}, 0)
-
 		page, _ := strconv.ParseInt(c.Query("page", "1"), 10, 64)
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
 		table := c.Param("table")
@@ -102,6 +99,9 @@ func main() {
 		totalPages := (totalCount + pageSize - 1) / pageSize
 		rows, err := q.Select("*").Offset((page - 1) * pageSize).Limit(pageSize).Rows()
 		if err == nil {
+			d := &Data{}
+			d.Items = make([]interface{}, 0)
+
 			for rows.Next() {
 				rows.ScanMap(row)
 				t := make(map[string]interface{})
