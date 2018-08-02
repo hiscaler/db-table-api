@@ -1,5 +1,6 @@
 {
   "Debug": true,
+  "ListenPort": "8080",
   "Driver": "mysql",
   "DSN": "user:password@/db",
   "TablePrefix": "",

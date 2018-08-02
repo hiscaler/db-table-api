@@ -20,6 +20,7 @@ import (
 
 var cfg = struct {
 	Debug           bool
+	ListenPort      string
 	Driver          string
 	DSN             string
 	TablePrefix     string
@@ -182,5 +183,9 @@ func main() {
 	})
 
 	http.Handle("/", router)
-	http.ListenAndServe(":8080", nil)
+	addr := cfg.ListenPort
+	if len(addr) == 0 {
+		addr = "8080"
+	}
+	http.ListenAndServe(":"+addr, nil)
 }
