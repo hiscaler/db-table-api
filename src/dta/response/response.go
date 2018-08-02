@@ -26,6 +26,6 @@ type SuccessListResponse struct {
 }
 
 type SuccessOneResponse struct {
-	Success bool `json:"success"`
-	Data    map[string]interface{}
+	Success bool                   `json:"success"`
+	Data    map[string]interface{} `json:"data"`
 }

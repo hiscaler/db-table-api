@@ -32,6 +32,20 @@ var cfg = struct {
 	toCamel:         false,
 }
 
+// 转换字符串为驼峰格式
+func toCamel(s, sep string) string {
+	if len(sep) == 0 {
+		return s
+	}
+
+	names := strings.Split(s, sep)
+	vv := make([]string, len(names))
+	for _, v := range names {
+		vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
+	}
+	return strings.Join(vv, "")
+}
+
 func parseTable(table string) string {
 	table = strings.Trim(table, " ")
 	if len(table) == 0 {
@@ -104,12 +118,7 @@ func main() {
 				t := make(map[string]interface{})
 				for name, v := range row {
 					if cfg.toCamel {
-						names := strings.Split(name, "_")
-						vv := make([]string, len(names))
-						for _, v := range names {
-							vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
-						}
-						name = strings.Join(vv, "")
+						name = toCamel(name, "_")
 					}
 					t[name] = v.String
 				}
