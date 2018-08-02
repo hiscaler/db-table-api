@@ -121,7 +121,7 @@ func main() {
 	)
 
 	// GET /api/
-	api.Get("/", func(c *routing.Context) error {
+	api.Get("/ping", func(c *routing.Context) error {
 		return c.Write("OK")
 	})
 
