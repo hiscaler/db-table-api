@@ -17,28 +17,51 @@ import (
 	"fmt"
 )
 
-func main() {
+var cfg = struct {
+	Debug           bool
+	Driver          string
+	DSN             string
+	TablePrefix     string
+	FieldNameFormat string
+	toCamel         bool
+}{
+	Debug:           true,
+	Driver:          "mysql",
+	FieldNameFormat: "original",
+	toCamel:         false,
+}
+
+func parseTable(table string) string {
+	table = strings.Trim(table, " ")
+	if len(table) == 0 {
+		panic("Table name is can't empty.")
+	}
+
+	if len(cfg.TablePrefix) > 0 && !strings.HasPrefix(table, cfg.TablePrefix) {
+		table = cfg.TablePrefix + table
+	}
+
+	return table
+}
+
+func init() {
 	// Read and get app config
 	jsonFile, err := ioutil.ReadFile("src/dta/config/conf.json")
 	if err != nil {
 		panic("Read config file failed.")
 	}
-	cfg := struct {
-		Debug           bool
-		Driver          string
-		DSN             string
-		TablePrefix     string
-		FieldNameFormat string
-	}{
-		Debug:           true,
-		Driver:          "mysql",
-		FieldNameFormat: "original",
-	}
+
 	err = json.Unmarshal(jsonFile, &cfg)
 	if err != nil {
 		panic("Config file is invalid. Must be a valid json format.");
 	}
 
+	if strings.ToLower(strings.Trim(cfg.FieldNameFormat, " ")) == "camel" {
+		cfg.toCamel = true
+	}
+}
+
+func main() {
 	router := routing.New()
 	router.Use(
 		access.Logger(log.Printf),
@@ -81,17 +104,8 @@ func main() {
 
 		page, _ := strconv.ParseInt(c.Query("page", "1"), 10, 64)
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
-		table := c.Param("table")
-		table = strings.Trim(table, " ")
-		if len(table) == 0 {
-			panic("Table name is can't empty.")
-		}
+		table := parseTable(c.Param("table"))
 
-		if len(cfg.TablePrefix) > 0 && !strings.HasPrefix(table, cfg.TablePrefix) {
-			table = cfg.TablePrefix + table
-		}
-
-		fieldNameCamelFormat := strings.ToLower(cfg.FieldNameFormat) == "camel"
 		row := dbx.NullStringMap{}
 		q := db.Select().From(table)
 		var totalCount int64
@@ -106,7 +120,7 @@ func main() {
 				rows.ScanMap(row)
 				t := make(map[string]interface{})
 				for name, v := range row {
-					if fieldNameCamelFormat {
+					if cfg.toCamel {
 						names := strings.Split(name, "_")
 						vv := make([]string, len(names))
 						for _, v := range names {
@@ -130,7 +144,6 @@ func main() {
 				Data:    *d,
 			}
 			return c.Write(resp)
-
 		} else {
 			error := &Error{
 				Message: fmt.Errorf("%v", err).Error(),
