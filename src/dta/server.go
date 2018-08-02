@@ -148,6 +148,41 @@ func main() {
 		}
 	})
 
+	// 获取指定的数据
+	// GET /api/TABLE_NAME/ID
+	api.Get(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
+		table := parseTable(c.Param("table"))
+		id := c.Param("id")
+		//item := make(map[string]interface{})
+		row := dbx.NullStringMap{}
+		err := db.Select().From(table).Where(dbx.HashExp{"id": id}).One(row)
+
+		if err == nil {
+			data := make(map[string]interface{})
+			for name, v := range row {
+				if cfg.toCamel {
+					name = toCamel(name, "_")
+				}
+				data[name] = v.String
+			}
+			resp := &response.SuccessOneResponse{
+				Success: true,
+				Data:    data,
+			}
+			return c.Write(resp)
+		} else {
+			error := &response.Error{
+				Message: fmt.Errorf("%v", err).Error(),
+			}
+			resp := &response.FailResponse{
+				Success: false,
+				Error:   *error,
+			}
+			return c.Write(resp)
+		}
+
+	})
+
 	http.Handle("/", router)
 	http.ListenAndServe(":8080", nil)
 }
