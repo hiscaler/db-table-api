@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"fmt"
+	"dta/response"
 )
 
 var cfg = struct {
@@ -81,27 +82,9 @@ func main() {
 		return c.Write("OK")
 	})
 
+	// 获取数据列表
 	// GET /api/TABLE_NAME?page=1&pageSize=100
 	api.Get(`/<table:\w+>`, func(c *routing.Context) error {
-		type Data struct {
-			Items []interface{}    `json:"items"`
-			Meta  map[string]int64 `json:"_meta"`
-		}
-
-		type Error struct {
-			Message string `json:"message"`
-		}
-
-		type SuccessResponse struct {
-			Success bool `json:"success"`
-			Data    Data `json:"data"`
-		}
-
-		type FailResponse struct {
-			Success bool  `json:"success"`
-			Error   Error `json:"error"`
-		}
-
 		page, _ := strconv.ParseInt(c.Query("page", "1"), 10, 64)
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
 		table := parseTable(c.Param("table"))
@@ -113,7 +96,7 @@ func main() {
 		totalPages := (totalCount + pageSize - 1) / pageSize
 		rows, err := q.Select("*").Offset((page - 1) * pageSize).Limit(pageSize).Rows()
 		if err == nil {
-			d := &Data{}
+			d := &response.SuccessListData{}
 			d.Items = make([]interface{}, 0)
 
 			for rows.Next() {
@@ -139,16 +122,16 @@ func main() {
 				"currentPage": page,
 				"perPage":     pageSize,
 			}
-			resp := &SuccessResponse{
+			resp := &response.SuccessListResponse{
 				Success: true,
 				Data:    *d,
 			}
 			return c.Write(resp)
 		} else {
-			error := &Error{
+			error := &response.Error{
 				Message: fmt.Errorf("%v", err).Error(),
 			}
-			resp := &FailResponse{
+			resp := &response.FailResponse{
 				Success: false,
 				Error:   *error,
 			}
