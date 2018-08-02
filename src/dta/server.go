@@ -153,10 +153,8 @@ func main() {
 	api.Get(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
-		//item := make(map[string]interface{})
 		row := dbx.NullStringMap{}
 		err := db.Select().From(table).Where(dbx.HashExp{"id": id}).One(row)
-
 		if err == nil {
 			data := make(map[string]interface{})
 			for name, v := range row {
