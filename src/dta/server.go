@@ -23,6 +23,8 @@ var cfg = struct {
 	ListenPort      string
 	Driver          string
 	DSN             string
+	database        string
+	tables          []string
 	TablePrefix     string
 	FieldNameFormat string
 	toCamel         bool
@@ -32,6 +34,8 @@ var cfg = struct {
 	FieldNameFormat: "original",
 	toCamel:         false,
 }
+
+var db *dbx.DB
 
 // 转换字符串为驼峰格式
 func toCamel(s, sep string) string {
@@ -57,6 +61,20 @@ func parseTable(table string) string {
 		table = cfg.TablePrefix + table
 	}
 
+	if len(cfg.tables) != 0 {
+		tableValid := false
+		for _, v := range cfg.tables {
+			if v == table {
+				tableValid = true
+				break
+			}
+		}
+
+		if !tableValid {
+			panic(fmt.Sprintf("Table `%s` not exists in database.", table))
+		}
+	}
+
 	return table
 }
 
@@ -75,6 +93,18 @@ func init() {
 	if strings.ToLower(strings.Trim(cfg.FieldNameFormat, " ")) == "camel" {
 		cfg.toCamel = true
 	}
+
+	t := strings.Split(cfg.DSN, "/")
+	if len(t) < 2 {
+		panic("DSN error.")
+	} else {
+		db, _ = dbx.Open(cfg.Driver, cfg.DSN)
+		cfg.database = t[1]
+		if strings.ToLower(cfg.Driver) == "mysql" && len(cfg.tables) == 0 {
+			// Only support MySQL
+			db.NewQuery(fmt.Sprintf("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '%s'", cfg.database)).Column(&cfg.tables)
+		}
+	}
 }
 
 func main() {
@@ -89,8 +119,6 @@ func main() {
 	api.Use(
 		content.TypeNegotiator(content.JSON),
 	)
-
-	db, _ := dbx.Open(cfg.Driver, cfg.DSN)
 
 	// GET /api/
 	api.Get("/", func(c *routing.Context) error {
