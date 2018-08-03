@@ -175,15 +175,11 @@ func main() {
 				Data:    *d,
 			}
 
-			etag := fmt.Sprintf(`"%s%d%d"`, table, page, pageSize)
-			etag = "W/" + fmt.Sprintf("%x", sha1.Sum([]byte(etag)))
+			etag := fmt.Sprintf(`"%s%d%d%d"`, table, totalCount, page, pageSize)
+			etag = fmt.Sprintf("%x", sha1.Sum([]byte(etag)))
 			c.Response.Header().Set("Etag", etag)
-
-			if match := c.Request.Header.Get("If-None-Match"); match != "" {
-				if strings.Contains(match, etag) {
-					c.Response.WriteHeader(http.StatusNotModified)
-					return nil
-				}
+			if match := c.Request.Header.Get("If-None-Match"); match != "" && match == etag {
+				c.Response.WriteHeader(http.StatusNotModified)
 				return nil
 			} else {
 				return c.Write(resp)
