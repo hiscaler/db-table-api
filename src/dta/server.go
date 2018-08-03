@@ -320,6 +320,44 @@ func main() {
 		}
 	})
 
+	// 根据主键删除表中的指定数据
+	// DELETE /TABLE_NAME/ID
+	api.Delete(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
+		table := parseTable(c.Param("table"))
+		id := c.Param("id")
+		result, ok := db.Delete(table, dbx.HashExp{"id": id}).Execute()
+		if ok == nil {
+			rowsAffected, err := result.RowsAffected()
+			if rowsAffected > 0 {
+				data := make(map[string]interface{})
+				resp := &response.SuccessOneResponse{
+					Success: true,
+					Data:    data,
+				}
+				return c.Write(resp)
+			} else {
+				error := &response.Error{
+					Message: fmt.Errorf("%v", err).Error(),
+				}
+				resp := &response.FailResponse{
+					Success: false,
+					Error:   *error,
+				}
+				return c.Write(resp)
+			}
+		} else {
+			error := &response.Error{
+				Message: fmt.Errorf("%v", err).Error(),
+			}
+			resp := &response.FailResponse{
+				Success: false,
+				Error:   *error,
+			}
+			return c.Write(resp)
+		}
+
+	})
+
 	http.Handle("/", router)
 	addr := cfg.ListenPort
 	if len(addr) == 0 {
