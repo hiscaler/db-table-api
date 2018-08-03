@@ -273,6 +273,53 @@ func main() {
 		}
 	})
 
+	// 修改表内容
+	// PUT /api/TABLE_NAME/ID
+	api.Put(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
+		table := parseTable(c.Param("table"))
+		id := c.Param("id")
+		row := dbx.NullStringMap{}
+		err := db.Select().From(table).Where(dbx.HashExp{"id": id}).One(row)
+		if err == nil {
+			c.Request.ParseForm()
+			columns := make(dbx.Params)
+			for k, v := range c.Request.PostForm {
+				if k == "id" {
+					continue
+				}
+				vv := v[0]
+				columns[k] = vv
+			}
+			_, ok := db.Update(table, columns, dbx.HashExp{"id": id}).Execute()
+			if ok == nil {
+				data := make(map[string]interface{})
+				resp := &response.SuccessOneResponse{
+					Success: true,
+					Data:    data,
+				}
+				return c.Write(resp)
+			} else {
+				error := &response.Error{
+					Message: fmt.Errorf("%v", err).Error(),
+				}
+				resp := &response.FailResponse{
+					Success: false,
+					Error:   *error,
+				}
+				return c.Write(resp)
+			}
+		} else {
+			error := &response.Error{
+				Message: fmt.Errorf("%v", err).Error(),
+			}
+			resp := &response.FailResponse{
+				Success: false,
+				Error:   *error,
+			}
+			return c.Write(resp)
+		}
+	})
+
 	http.Handle("/", router)
 	addr := cfg.ListenPort
 	if len(addr) == 0 {
