@@ -45,34 +45,36 @@ func toCamel(s, sep string) string {
 		return s
 	}
 
-	names := strings.Split(s, sep)
-	vv := make([]string, len(names))
-	for _, v := range names {
-		vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
+	if strings.Index(s, sep) == -1 {
+		return strings.ToUpper(s[:1]) + strings.ToLower(s[1:]);
+	} else {
+		names := strings.Split(s, sep)
+		vv := make([]string, len(names))
+		for _, v := range names {
+			vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
+		}
+
+		return strings.Join(vv, "")
 	}
-	return strings.Join(vv, "")
 }
 
 func parseTable(table string) string {
 	table = strings.Trim(table, " ")
-	if len(table) == 0 {
-		panic("Table name is can't empty.")
-	}
 
 	if len(cfg.TablePrefix) > 0 && !strings.HasPrefix(table, cfg.TablePrefix) {
 		table = cfg.TablePrefix + table
 	}
 
 	if len(cfg.tables) != 0 {
-		tableValid := false
+		inTables := false
 		for _, v := range cfg.tables {
 			if v == table {
-				tableValid = true
+				inTables = true
 				break
 			}
 		}
 
-		if !tableValid {
+		if !inTables {
 			panic(fmt.Sprintf("Table `%s` not exists in database.", table))
 		}
 	}
@@ -233,7 +235,6 @@ func main() {
 			}
 			return c.Write(resp)
 		}
-
 	})
 
 	http.Handle("/", router)
