@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"dta/response"
+	"crypto/sha1"
 )
 
 var cfg = struct {
@@ -173,7 +174,21 @@ func main() {
 				Success: true,
 				Data:    *d,
 			}
-			return c.Write(resp)
+
+			etag := fmt.Sprintf(`"%s%d%d"`, table, page, pageSize)
+			etag = "W/" + fmt.Sprintf("%x", sha1.Sum([]byte(etag)))
+			c.Response.Header().Set("Etag", etag)
+
+			if match := c.Request.Header.Get("If-None-Match"); match != "" {
+				if strings.Contains(match, etag) {
+					c.Response.WriteHeader(http.StatusNotModified)
+					return nil
+				}
+				return nil
+			} else {
+				return c.Write(resp)
+			}
+
 		} else {
 			error := &response.Error{
 				Message: fmt.Errorf("%v", err).Error(),
