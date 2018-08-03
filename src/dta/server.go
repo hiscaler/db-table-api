@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"dta/response"
 	"crypto/sha1"
+	"github.com/go-ozzo/ozzo-routing/cors"
 )
 
 var cfg = struct {
@@ -128,6 +129,11 @@ func main() {
 	api := router.Group("/api")
 	api.Use(
 		content.TypeNegotiator(content.JSON),
+		cors.Handler(cors.Options{
+			AllowOrigins: "*",
+			AllowHeaders: "*",
+			AllowMethods: "*",
+		}),
 	)
 
 	// GET /api/
