@@ -29,6 +29,7 @@ var cfg = struct {
 	tables          []string
 	TablePrefix     string
 	FieldNameFormat string
+	BooleanFields   map[string][]string // 需要处理为布尔值的字段
 	toCamel         bool
 }{
 	Debug:           true,
@@ -55,6 +56,19 @@ func toCamel(s, sep string) string {
 		}
 
 		return strings.Join(vv, "")
+	}
+}
+
+// string to boolean convert
+func toBoolean(s string) bool {
+	if len(s) == 0 {
+		return false
+	} else {
+		if i, _ := strconv.ParseInt(s, 10, 0); i > 0 {
+			return true
+		} else {
+			return false
+		}
 	}
 }
 
@@ -149,6 +163,13 @@ func main() {
 		page, _ := strconv.ParseInt(c.Query("page", "1"), 10, 64)
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
 		table := parseTable(c.Param("table"))
+		booleanFields := make([]string, 0)
+		for _, k := range []string{"_", table} {
+			if v, ok := cfg.BooleanFields[k]; ok && len(v) > 0 {
+				fmt.Println(v)
+				booleanFields = append(booleanFields, v...)
+			}
+		}
 
 		row := dbx.NullStringMap{}
 		q := db.Select().From(table)
@@ -164,10 +185,25 @@ func main() {
 				rows.ScanMap(row)
 				t := make(map[string]interface{})
 				for name, v := range row {
+					v1 := v.String
+					// Process boolean value
+					toBool := false
+					for _, v := range booleanFields {
+						if name == v {
+							toBool = true
+							break
+						}
+					}
+
 					if cfg.toCamel {
 						name = toCamel(name, "_")
 					}
-					t[name] = v.String
+
+					if toBool {
+						t[name] = toBoolean(v1)
+					} else {
+						t[name] = v1
+					}
 				}
 				d.Items = append(d.Items, t)
 			}

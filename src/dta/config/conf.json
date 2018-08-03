@@ -5,4 +5,7 @@
   "DSN": "user:password@/db",
   "TablePrefix": "",
   "FieldNameFormat": "original"
+  "BooleanFields": {
+    "_": []
+  }
 }
