@@ -100,9 +100,18 @@ func init() {
 	} else {
 		db, _ = dbx.Open(cfg.Driver, cfg.DSN)
 		cfg.database = t[1]
-		if strings.ToLower(cfg.Driver) == "mysql" && len(cfg.tables) == 0 {
-			// Only support MySQL
-			db.NewQuery(fmt.Sprintf("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '%s'", cfg.database)).Column(&cfg.tables)
+		if len(cfg.tables) == 0 {
+			sql := ""
+			switch strings.ToLower(cfg.Driver) {
+			case "mysql":
+				sql = fmt.Sprintf("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '%s'", cfg.database)
+			case "sqlite3":
+				sql = "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rootpage ASC"
+			}
+
+			if len(sql) > 0 {
+				db.NewQuery(sql).Column(&cfg.tables)
+			}
 		}
 	}
 }
