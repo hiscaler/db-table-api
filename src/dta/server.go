@@ -325,8 +325,8 @@ func main() {
 	api.Delete(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
-		result, ok := db.Delete(table, dbx.HashExp{"id": id}).Execute()
-		if ok == nil {
+		result, err := db.Delete(table, dbx.HashExp{"id": id}).Execute()
+		if err == nil {
 			rowsAffected, err := result.RowsAffected()
 			if rowsAffected > 0 {
 				data := make(map[string]interface{})
