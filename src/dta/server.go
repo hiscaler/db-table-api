@@ -20,7 +20,12 @@ import (
 	"github.com/go-ozzo/ozzo-routing/cors"
 )
 
-var cfg = struct {
+var (
+	cfg Config
+	db  *dbx.DB
+)
+
+type Config struct {
 	Debug           bool
 	ListenPort      string
 	Driver          string
@@ -31,14 +36,7 @@ var cfg = struct {
 	FieldNameFormat string
 	BooleanFields   map[string][]string // 需要处理为布尔值的字段
 	toCamel         bool
-}{
-	Debug:           true,
-	Driver:          "mysql",
-	FieldNameFormat: "original",
-	toCamel:         false,
 }
-
-var db *dbx.DB
 
 // 转换字符串为驼峰格式
 func toCamel(s, sep string) string {
@@ -96,16 +94,42 @@ func parseTable(table string) string {
 	return table
 }
 
-func init() {
-	// Read and get app config
-	jsonFile, err := ioutil.ReadFile("src/dta/config/conf.json")
+type InvalidConfig struct {
+	file   string
+	config string
+}
+
+func (e *InvalidConfig) Error() string {
+	return fmt.Sprintf("%v", e.file)
+}
+
+// 载入配置文件
+func loadConfig() (*Config, error) {
+	cfg := &Config{
+		Debug:           true,
+		Driver:          "mysql",
+		FieldNameFormat: "original",
+		toCamel:         false,
+	}
+	filePath := "src/dta/config/conf.json"
+	jsonFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		panic("Read config file failed.")
+		return nil, &InvalidConfig{file: filePath}
 	}
 
 	err = json.Unmarshal(jsonFile, &cfg)
 	if err != nil {
-		panic("Config file is invalid. Must be a valid json format.");
+		return nil, &InvalidConfig{file: filePath, config: string(jsonFile)}
+	}
+
+	return cfg, nil
+}
+
+func init() {
+	cfg, err := loadConfig()
+	if err != nil {
+		ae := err.(*InvalidConfig)
+		panic("Config file read error:\nfile = " + ae.file + "\nconfig = " + ae.config)
 	}
 
 	if strings.ToLower(strings.Trim(cfg.FieldNameFormat, " ")) == "camel" {
