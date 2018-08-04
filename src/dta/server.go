@@ -157,6 +157,42 @@ func main() {
 		return c.Write("OK")
 	})
 
+	// 添加记录
+	// POST /api/TABLE_NAME
+	api.Post(`/<table:\w+>`, func(c *routing.Context) error {
+		table := parseTable(c.Param("table"))
+		c.Request.ParseForm()
+		columns := make(dbx.Params)
+		for k, v := range c.Request.PostForm {
+			if k == "id" {
+				continue
+			}
+			vv := v[0]
+			columns[k] = vv
+		}
+		result, err := db.Insert(table, columns).Execute()
+		if err == nil {
+			lastInsertId, _ := result.LastInsertId()
+			data := make(map[string]interface{})
+			data = columns
+			data["id"] = lastInsertId
+			resp := &response.SuccessOneResponse{
+				Success: false,
+				Data:    data,
+			}
+			return c.Write(resp)
+		} else {
+			error := &response.Error{
+				Message: fmt.Errorf("%v", err).Error(),
+			}
+			resp := &response.FailResponse{
+				Success: false,
+				Error:   *error,
+			}
+			return c.Write(resp)
+		}
+	})
+
 	// 获取数据列表
 	// GET /api/TABLE_NAME?page=1&pageSize=100
 	api.Get(`/<table:\w+>`, func(c *routing.Context) error {
