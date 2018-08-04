@@ -327,11 +327,48 @@ func main() {
 		err := db.Select().From(table).Where(dbx.HashExp{"id": id}).One(row)
 		if err == nil {
 			data := make(map[string]interface{})
+			booleanFields := make([]string, 0)
+			ignoreFields := make([]string, 0)
+			for _, k := range []string{"_", table} {
+				if v, ok := cfg.BooleanFields[k]; ok {
+					booleanFields = append(booleanFields, v...)
+				}
+
+				if v, ok := cfg.IgnoreFields[k]; ok && len(v) > 0 {
+					ignoreFields = append(ignoreFields, v...)
+				}
+			}
 			for name, v := range row {
+				ignore := false
+				for _, v := range ignoreFields {
+					if name == v {
+						ignore = true
+						break
+					}
+				}
+				if ignore {
+					continue
+				}
+
+				v1 := v.String
+				// Process boolean value
+				toBool := false
+				for _, v := range booleanFields {
+					if name == v {
+						toBool = true
+						break
+					}
+				}
+
 				if cfg.toCamel {
 					name = toCamel(name, "_")
 				}
-				data[name] = v.String
+
+				if toBool {
+					data[name] = toBoolean(v1)
+				} else {
+					data[name] = v1
+				}
 			}
 			resp := &response.SuccessOneResponse{
 				Success: true,
