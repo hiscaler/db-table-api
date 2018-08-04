@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	cfg Config
+	cfg *Config
 	db  *dbx.DB
 )
 
@@ -35,6 +35,7 @@ type Config struct {
 	TablePrefix     string
 	FieldNameFormat string
 	BooleanFields   map[string][]string // 需要处理为布尔值的字段
+	IgnoreFields    map[string][]string // 忽略的字段
 	toCamel         bool
 }
 
@@ -126,10 +127,11 @@ func loadConfig() (*Config, error) {
 }
 
 func init() {
-	cfg, err := loadConfig()
-	if err != nil {
+	if c, err := loadConfig(); err != nil {
 		ae := err.(*InvalidConfig)
 		panic("Config file read error:\nfile = " + ae.file + "\nconfig = " + ae.config)
+	} else {
+		cfg = c
 	}
 
 	if strings.ToLower(strings.Trim(cfg.FieldNameFormat, " ")) == "camel" {
@@ -224,10 +226,14 @@ func main() {
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
 		table := parseTable(c.Param("table"))
 		booleanFields := make([]string, 0)
+		ignoreFields := make([]string, 0)
 		for _, k := range []string{"_", table} {
-			if v, ok := cfg.BooleanFields[k]; ok && len(v) > 0 {
-				fmt.Println(v)
+			if v, ok := cfg.BooleanFields[k]; ok {
 				booleanFields = append(booleanFields, v...)
+			}
+
+			if v, ok := cfg.IgnoreFields[k]; ok && len(v) > 0 {
+				ignoreFields = append(ignoreFields, v...)
 			}
 		}
 
@@ -245,6 +251,17 @@ func main() {
 				rows.ScanMap(row)
 				t := make(map[string]interface{})
 				for name, v := range row {
+					ignore := false
+					for _, v := range ignoreFields {
+						if name == v {
+							ignore = true
+							break
+						}
+					}
+					if ignore {
+						continue
+					}
+
 					v1 := v.String
 					// Process boolean value
 					toBool := false
