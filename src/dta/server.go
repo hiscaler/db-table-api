@@ -327,7 +327,7 @@ func main() {
 		id := c.Param("id")
 		result, err := db.Delete(table, dbx.HashExp{"id": id}).Execute()
 		if err == nil {
-			rowsAffected, err := result.RowsAffected()
+			rowsAffected, _ := result.RowsAffected()
 			if rowsAffected > 0 {
 				data := make(map[string]interface{})
 				resp := &response.SuccessOneResponse{
@@ -337,7 +337,7 @@ func main() {
 				return c.Write(resp)
 			} else {
 				error := &response.Error{
-					Message: fmt.Errorf("%v", err).Error(),
+					Message: fmt.Sprintf("Not found id eq %v data.", id),
 				}
 				resp := &response.FailResponse{
 					Success: false,
