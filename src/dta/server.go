@@ -45,17 +45,16 @@ func toCamel(s, sep string) string {
 		return s
 	}
 
+	var b strings.Builder
 	if strings.Index(s, sep) == -1 {
-		return strings.ToUpper(s[:1]) + strings.ToLower(s[1:]);
+		fmt.Fprint(&b, strings.ToUpper(s[:1]), s[1:])
 	} else {
-		names := strings.Split(s, sep)
-		vv := make([]string, len(names))
-		for _, v := range names {
-			vv = append(vv, strings.ToUpper(v[:1])+strings.ToLower(v[1:]))
+		for _, v := range strings.Split(s, sep) {
+			fmt.Fprint(&b, strings.ToUpper(v[:1]), v[1:])
 		}
-
-		return strings.Join(vv, "")
 	}
+
+	return b.String()
 }
 
 // string to boolean convert
