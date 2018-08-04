@@ -6,6 +6,12 @@
 ```shell
 ./server
 ```
+
+## 验证服务是否开启
+```url
+GET http://127.0.0.1:8080/api/ping
+```
+服务正常的话，则会返回 "OK" 字符串。
 ## 数据操作
 
 A. 访问接口列表接口获取数据列表
@@ -32,7 +38,7 @@ Content-Type: application/x-www-form-urlencoded;charset=utf-8
 username=username1&password=pwd1
 ```
 
-F. 添加记录
+E. 添加记录
 ```url
 POST http://127.0.0.1:8080/api/you-access-table-name
 ```
