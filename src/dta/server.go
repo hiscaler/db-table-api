@@ -27,17 +27,18 @@ var (
 )
 
 type Config struct {
-	Debug           bool
-	ListenPort      string
-	Driver          string
-	DSN             string
-	database        string
-	tables          []string
-	TablePrefix     string
-	FieldNameFormat string
-	BooleanFields   map[string][]string // 需要处理为布尔值的字段
-	IgnoreFields    map[string][]string // 忽略的字段
-	toCamel         bool
+	Debug                 bool
+	ListenPort            string
+	Driver                string
+	DSN                   string
+	database              string
+	tables                []string
+	TablePrefix           string
+	DefaultPrimaryKeyName string // 默认主键名称
+	FieldNameFormat       string
+	BooleanFields         map[string][]string // 需要处理为布尔值的字段
+	IgnoreFields          map[string][]string // 忽略的字段
+	toCamel               bool
 }
 
 // 转换字符串为驼峰格式
@@ -96,13 +97,13 @@ func parseTable(table string) string {
 }
 
 // 获取数据表主键
-func guessPrimaryKey(table string) string {
+func getPrimaryKeyName(table string) string {
 	var tk = struct {
 		Table       string
 		Column_name string
 	}{
 		Table:       table,
-		Column_name: "id",
+		Column_name: cfg.DefaultPrimaryKeyName,
 	}
 	db.NewQuery(fmt.Sprintf("SHOW KEYS FROM %v WHERE Key_name = 'PRIMARY'", table)).Row(&tk)
 
@@ -121,10 +122,11 @@ func (e *InvalidConfig) Error() string {
 // 载入配置文件
 func loadConfig() (*Config, error) {
 	cfg := &Config{
-		Debug:           true,
-		Driver:          "mysql",
-		FieldNameFormat: "original",
-		toCamel:         false,
+		Debug:                 true,
+		Driver:                "mysql",
+		FieldNameFormat:       "original",
+		toCamel:               false,
+		DefaultPrimaryKeyName: "id",
 	}
 	filePath := "src/dta/config/conf.json"
 	jsonFile, err := ioutil.ReadFile(filePath)
@@ -338,7 +340,7 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		err := db.Select().From(table).Where(dbx.HashExp{guessPrimaryKey(table): id}).One(row)
+		err := db.Select().From(table).Where(dbx.HashExp{getPrimaryKeyName(table): id}).One(row)
 		if err == nil {
 			data := make(map[string]interface{})
 			booleanFields := make([]string, 0)
@@ -407,7 +409,7 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		primaryKey := guessPrimaryKey(table)
+		primaryKey := getPrimaryKeyName(table)
 		err := db.Select().From(table).Where(dbx.HashExp{primaryKey: id}).One(row)
 		if err == nil {
 			c.Request.ParseForm()
@@ -454,7 +456,7 @@ func main() {
 	api.Delete(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
-		result, err := db.Delete(table, dbx.HashExp{guessPrimaryKey(table): id}).Execute()
+		result, err := db.Delete(table, dbx.HashExp{getPrimaryKeyName(table): id}).Execute()
 		if err == nil {
 			rowsAffected, _ := result.RowsAffected()
 			if rowsAffected > 0 {

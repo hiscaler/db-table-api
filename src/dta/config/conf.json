@@ -5,6 +5,7 @@
   "DSN": "user:password@/db",
   "TablePrefix": "",
   "FieldNameFormat": "original"
+  "DefaultPrimaryKeyName": "id",
   "BooleanFields": {
     "_": []
   "IgnoreFields": {
