@@ -96,19 +96,17 @@ func parseTable(table string) string {
 }
 
 // 获取数据表主键
-func guessPrimaryKey(table string) (string, bool) {
+func guessPrimaryKey(table string) string {
 	var tk = struct {
 		Table       string
 		Column_name string
 	}{
-		Table: table,
+		Table:       table,
+		Column_name: "id",
 	}
 	db.NewQuery(fmt.Sprintf("SHOW KEYS FROM %v WHERE Key_name = 'PRIMARY'", table)).Row(&tk)
-	if len(tk.Column_name) > 0 {
-		return tk.Column_name, true
-	} else {
-		return "", false
-	}
+
+	return tk.Column_name
 }
 
 type InvalidConfig struct {
@@ -340,11 +338,7 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		primaryKey, found := guessPrimaryKey(table)
-		if !found {
-			primaryKey = "id"
-		}
-		err := db.Select().From(table).Where(dbx.HashExp{primaryKey: id}).One(row)
+		err := db.Select().From(table).Where(dbx.HashExp{guessPrimaryKey(table): id}).One(row)
 		if err == nil {
 			data := make(map[string]interface{})
 			booleanFields := make([]string, 0)
@@ -413,22 +407,19 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		primaryKey, found := guessPrimaryKey(table)
-		if !found {
-			primaryKey = "id"
-		}
+		primaryKey := guessPrimaryKey(table)
 		err := db.Select().From(table).Where(dbx.HashExp{primaryKey: id}).One(row)
 		if err == nil {
 			c.Request.ParseForm()
 			columns := make(dbx.Params)
 			for k, v := range c.Request.PostForm {
-				if k == "id" {
+				if k == primaryKey {
 					continue
 				}
 				vv := v[0]
 				columns[k] = vv
 			}
-			_, ok := db.Update(table, columns, dbx.HashExp{"id": id}).Execute()
+			_, ok := db.Update(table, columns, dbx.HashExp{primaryKey: id}).Execute()
 			if ok == nil {
 				data := make(map[string]interface{})
 				resp := &response.SuccessOneResponse{
@@ -463,11 +454,7 @@ func main() {
 	api.Delete(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
-		primaryKey, found := guessPrimaryKey(table)
-		if !found {
-			primaryKey = "id"
-		}
-		result, err := db.Delete(table, dbx.HashExp{primaryKey: id}).Execute()
+		result, err := db.Delete(table, dbx.HashExp{guessPrimaryKey(table): id}).Execute()
 		if err == nil {
 			rowsAffected, _ := result.RowsAffected()
 			if rowsAffected > 0 {
