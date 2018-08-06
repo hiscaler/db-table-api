@@ -59,6 +59,7 @@ username=username1&password=pwd1
   "Driver": "mysql",
   "DSN": "username:password@/you-database-name",
   "TablePrefix": "",
+  "DefaultPrimaryKeyName": "id",
   "FieldNameFormat": "original",
   "BooleanFields": {
     "_": [
@@ -80,6 +81,7 @@ ListenPort |  监听的端口，默认为 8080
 Driver |  数据库类型（支持 mysql, postgreSQL, sqlite3, mssql）
 DSN | 数据源连接设置
 TablePrefix | 表前缀
+DefaultPrimaryKeyName | 默认主键名称（默认为 id）
 FieldNameFormat | 输出字段是否为驼峰格式（可选值为：original[原样输出], camel[驼峰格式]），启用后 created_at 会转换为 CreatedAt 输出，默认值为 original, 原样输出数据库中字段名称
 BooleanFields | 需要转换为布尔值输出的字段名称，"_"中表示全局的，如果需要转换单独的某个表，则填写 "tablename": ["field1", "field2"] 即可
 IgnoreFields | 忽略输出的字段，在此范围内的字段都将屏蔽输出，"_"中表示全局的，如果需要设定单独的某个表，则填写 "tablename": ["field1", "field2"] 即可
