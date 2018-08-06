@@ -18,6 +18,7 @@ import (
 	"dta/response"
 	"crypto/sha1"
 	"github.com/go-ozzo/ozzo-routing/cors"
+	"errors"
 )
 
 var (
@@ -87,7 +88,7 @@ func parseTable(table string) string {
 		}
 
 		if !inTables {
-			panic(fmt.Sprintf("Table `%s` not exists in database.", table))
+			errors.New(fmt.Sprintf("Table `%s` not exists in database.", table))
 		}
 	}
 
