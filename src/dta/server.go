@@ -95,6 +95,22 @@ func parseTable(table string) string {
 	return table
 }
 
+// 获取数据表主键
+func guessPrimaryKey(table string) (string, bool) {
+	var tk = struct {
+		Table       string
+		Column_name string
+	}{
+		Table: table,
+	}
+	db.NewQuery(fmt.Sprintf("SHOW KEYS FROM %v WHERE Key_name = 'PRIMARY'", table)).Row(&tk)
+	if len(tk.Column_name) > 0 {
+		return tk.Column_name, true
+	} else {
+		return "", false
+	}
+}
+
 type InvalidConfig struct {
 	file   string
 	config string
@@ -324,7 +340,11 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		err := db.Select().From(table).Where(dbx.HashExp{"id": id}).One(row)
+		primaryKey, found := guessPrimaryKey(table)
+		if !found {
+			primaryKey = "id"
+		}
+		err := db.Select().From(table).Where(dbx.HashExp{primaryKey: id}).One(row)
 		if err == nil {
 			data := make(map[string]interface{})
 			booleanFields := make([]string, 0)
@@ -393,7 +413,11 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		err := db.Select().From(table).Where(dbx.HashExp{"id": id}).One(row)
+		primaryKey, found := guessPrimaryKey(table)
+		if !found {
+			primaryKey = "id"
+		}
+		err := db.Select().From(table).Where(dbx.HashExp{primaryKey: id}).One(row)
 		if err == nil {
 			c.Request.ParseForm()
 			columns := make(dbx.Params)
@@ -439,7 +463,11 @@ func main() {
 	api.Delete(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
-		result, err := db.Delete(table, dbx.HashExp{"id": id}).Execute()
+		primaryKey, found := guessPrimaryKey(table)
+		if !found {
+			primaryKey = "id"
+		}
+		result, err := db.Delete(table, dbx.HashExp{primaryKey: id}).Execute()
 		if err == nil {
 			rowsAffected, _ := result.RowsAffected()
 			if rowsAffected > 0 {
