@@ -268,6 +268,7 @@ func main() {
 			}
 		}
 
+		// Build database query conditions
 		fieldNames, _ := getTableColumnNames(table)
 		exp := dbx.HashExp{}
 		for k, item := range c.Request.URL.Query() {
