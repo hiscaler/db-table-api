@@ -326,9 +326,6 @@ func main() {
 
 		row := dbx.NullStringMap{}
 		q := db.Select().From(table).Where(exp)
-		if cfg.Debug {
-			log.Println(q.Build().SQL(), fmt.Sprintf("#%v", q.Build().Params()))
-		}
 		var totalCount int64
 		q.Select("COUNT(*)").Row(&totalCount)
 		totalPages := (totalCount + pageSize - 1) / pageSize
@@ -336,7 +333,11 @@ func main() {
 		for _, col := range cols {
 			q.AndSelect(col)
 		}
-		rows, err := q.Offset((page - 1) * pageSize).Limit(pageSize).Rows()
+		q.Offset((page - 1) * pageSize).Limit(pageSize)
+		if cfg.Debug {
+			log.Println(q.Build().SQL(), fmt.Sprintf("#%v", q.Build().Params()))
+		}
+		rows, err := q.Rows()
 		if err == nil {
 			d := &response.SuccessListData{}
 			d.Items = make([]interface{}, 0)
