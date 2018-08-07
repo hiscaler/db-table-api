@@ -110,6 +110,21 @@ func getPrimaryKeyName(table string) string {
 	return tk.Column_name
 }
 
+// 获取表字段名称
+func getTableColumnNames(table string) ([]string, error) {
+	names := make([]string, 0)
+	switch strings.ToLower(cfg.Driver) {
+	case "mysql":
+		db.NewQuery(fmt.Sprintf("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v'", cfg.database, table)).Column(&names)
+	}
+
+	if len(names) > 0 {
+		return names, nil
+	} else {
+		return names, errors.New("Not Implement")
+	}
+}
+
 type InvalidConfig struct {
 	file   string
 	config string
@@ -253,8 +268,48 @@ func main() {
 			}
 		}
 
+		fieldNames, _ := getTableColumnNames(table)
+		exp := dbx.HashExp{}
+		for k, item := range c.Request.URL.Query() {
+			if k == "page" || k == "pageSize" {
+				continue
+			}
+
+			if len(fieldNames) > 0 {
+				found := false
+				for _, name := range fieldNames {
+					if k == name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Println(fmt.Sprintf("Param `%v` is not a valid field name for `%v` table", k, table))
+					continue
+				}
+			}
+
+			if len(item) == 1 {
+				// username=a
+				exp[k] = item[0]
+			} else {
+				// username=a&username=b
+				vv := make([]interface{}, len(item))
+				for i, v := range item {
+					vv[i] = v
+				}
+				exp[k] = vv
+			}
+		}
+		if cfg.Debug {
+			log.Println(exp)
+		}
+
 		row := dbx.NullStringMap{}
-		q := db.Select().From(table)
+		q := db.Select().From(table).Where(exp)
+		if cfg.Debug {
+			log.Println(q.Build().SQL(), fmt.Sprintf("#%v", q.Build().Params()))
+		}
 		var totalCount int64
 		q.Select("COUNT(*)").Row(&totalCount)
 		totalPages := (totalCount + pageSize - 1) / pageSize
