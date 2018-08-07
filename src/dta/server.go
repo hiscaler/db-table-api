@@ -330,11 +330,7 @@ func main() {
 		var totalCount int64
 		q.Select("COUNT(*)").Row(&totalCount)
 		totalPages := (totalCount + pageSize - 1) / pageSize
-		q.Select()
-		for _, col := range cols {
-			q.AndSelect(col)
-		}
-		q.Offset((page - 1) * pageSize).Limit(pageSize)
+		q.Select(cols...).Offset((page - 1) * pageSize).Limit(pageSize)
 		if cfg.Debug {
 			log.Println(q.Build().SQL(), fmt.Sprintf("#%v", q.Build().Params()))
 		}
