@@ -251,7 +251,7 @@ func main() {
 	})
 
 	// 获取数据列表
-	// GET /api/TABLE_NAME?page=1&pageSize=100
+	// GET /api/TABLE_NAME?page=1&pageSize=100&username=a&fields=username
 	api.Get(`/<table:\w+>`, func(c *routing.Context) error {
 		page, _ := strconv.ParseInt(c.Query("page", "1"), 10, 64)
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
@@ -305,6 +305,25 @@ func main() {
 			log.Println(exp)
 		}
 
+		// Select columns process
+		cols := make([]string, 0)
+		fields := c.Query("fields")
+		if len(fields) > 0 {
+			if len(fieldNames) > 0 {
+				for _, v := range strings.Split(fields, ",") {
+					for _, name := range fieldNames {
+						if v == name {
+							cols = append(cols, v)
+						}
+					}
+				}
+			} else {
+				cols = strings.Split(fields, ",")
+			}
+		} else {
+			cols = append(cols, "*")
+		}
+
 		row := dbx.NullStringMap{}
 		q := db.Select().From(table).Where(exp)
 		if cfg.Debug {
@@ -313,7 +332,11 @@ func main() {
 		var totalCount int64
 		q.Select("COUNT(*)").Row(&totalCount)
 		totalPages := (totalCount + pageSize - 1) / pageSize
-		rows, err := q.Select("*").Offset((page - 1) * pageSize).Limit(pageSize).Rows()
+		q.Select()
+		for _, col := range cols {
+			q.AndSelect(col)
+		}
+		rows, err := q.Offset((page - 1) * pageSize).Limit(pageSize).Rows()
 		if err == nil {
 			d := &response.SuccessListData{}
 			d.Items = make([]interface{}, 0)
