@@ -28,8 +28,10 @@ var (
 
 // Current table information
 type Table struct {
-	PrimaryKey string
-	Columns    []string
+	PrimaryKey    string
+	Columns       []string
+	booleanFields []string // 需要处理为布尔值的字段
+	ignoreFields  []string // 忽略的字段
 }
 
 type Config struct {
@@ -118,6 +120,20 @@ func parseTable(table string) string {
 	if len(columns) > 0 {
 		cfg.table.Columns = columns
 	}
+
+	booleanFields := make([]string, 0)
+	ignoreFields := make([]string, 0)
+	for _, k := range []string{"_", table} {
+		if v, ok := cfg.BooleanFields[k]; ok {
+			booleanFields = append(booleanFields, v...)
+		}
+
+		if v, ok := cfg.IgnoreFields[k]; ok && len(v) > 0 {
+			ignoreFields = append(ignoreFields, v...)
+		}
+	}
+	cfg.table.booleanFields = booleanFields
+	cfg.table.ignoreFields = ignoreFields
 
 	return table
 }
@@ -253,17 +269,6 @@ func main() {
 		page, _ := strconv.ParseInt(c.Query("page", "1"), 10, 64)
 		pageSize, _ := strconv.ParseInt(c.Query("pageSize", "100"), 10, 64)
 		table := parseTable(c.Param("table"))
-		booleanFields := make([]string, 0)
-		ignoreFields := make([]string, 0)
-		for _, k := range []string{"_", table} {
-			if v, ok := cfg.BooleanFields[k]; ok {
-				booleanFields = append(booleanFields, v...)
-			}
-
-			if v, ok := cfg.IgnoreFields[k]; ok && len(v) > 0 {
-				ignoreFields = append(ignoreFields, v...)
-			}
-		}
 
 		// Build database query conditions
 		exp := dbx.HashExp{}
@@ -340,7 +345,7 @@ func main() {
 				t := make(map[string]interface{})
 				for name, v := range row {
 					ignore := false
-					for _, v := range ignoreFields {
+					for _, v := range cfg.table.ignoreFields {
 						if name == v {
 							ignore = true
 							break
@@ -353,7 +358,7 @@ func main() {
 					v1 := v.String
 					// Process boolean value
 					toBool := false
-					for _, v := range booleanFields {
+					for _, v := range cfg.table.booleanFields {
 						if name == v {
 							toBool = true
 							break
@@ -415,20 +420,9 @@ func main() {
 		err := db.Select().From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: id}).One(row)
 		if err == nil {
 			data := make(map[string]interface{})
-			booleanFields := make([]string, 0)
-			ignoreFields := make([]string, 0)
-			for _, k := range []string{"_", table} {
-				if v, ok := cfg.BooleanFields[k]; ok {
-					booleanFields = append(booleanFields, v...)
-				}
-
-				if v, ok := cfg.IgnoreFields[k]; ok && len(v) > 0 {
-					ignoreFields = append(ignoreFields, v...)
-				}
-			}
 			for name, v := range row {
 				ignore := false
-				for _, v := range ignoreFields {
+				for _, v := range cfg.table.ignoreFields {
 					if name == v {
 						ignore = true
 						break
@@ -441,7 +435,7 @@ func main() {
 				v1 := v.String
 				// Process boolean value
 				toBool := false
-				for _, v := range booleanFields {
+				for _, v := range cfg.table.booleanFields {
 					if name == v {
 						toBool = true
 						break
