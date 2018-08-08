@@ -237,10 +237,25 @@ func main() {
 			if k == "id" {
 				continue
 			}
-			vv := v[0]
-			columns[k] = vv
+			if len(cfg.table.Columns) > 0 {
+				found := false
+				for _, name := range cfg.table.Columns {
+					if k == name {
+						found = true
+					}
+				}
+				if !found {
+					continue
+				}
+			}
+
+			columns[k] = v[0]
 		}
-		result, err := db.Insert(table, columns).Execute()
+		q := db.Insert(table, columns)
+		if cfg.Debug {
+			log.Println(q.SQL(), columns, fmt.Sprintf("#%v", q.Params()))
+		}
+		result, err := q.Execute()
 		if err == nil {
 			lastInsertId, _ := result.LastInsertId()
 			data := make(map[string]interface{})
@@ -327,15 +342,15 @@ func main() {
 		}
 
 		row := dbx.NullStringMap{}
-		q := db.Select().From(table).Where(exp)
+		sq := db.Select().From(table).Where(exp)
 		var totalCount int64
-		q.Select("COUNT(*)").Row(&totalCount)
+		sq.Select("COUNT(*)").Row(&totalCount)
 		totalPages := (totalCount + pageSize - 1) / pageSize
-		q.Select(cols...).Offset((page - 1) * pageSize).Limit(pageSize)
+		sq.Select(cols...).Offset((page - 1) * pageSize).Limit(pageSize)
 		if cfg.Debug {
-			log.Println(q.Build().SQL(), fmt.Sprintf("#%v", q.Build().Params()))
+			log.Println(sq.Build().SQL(), fmt.Sprintf("#%v", sq.Build().Params()))
 		}
-		rows, err := q.Rows()
+		rows, err := sq.Rows()
 		if err == nil {
 			d := &response.SuccessListData{}
 			d.Items = make([]interface{}, 0)
@@ -415,7 +430,6 @@ func main() {
 	// GET /api/TABLE_NAME/ID
 	api.Get(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
-		id := c.Param("id")
 
 		// Select columns process
 		cols := make([]string, 0)
@@ -435,12 +449,12 @@ func main() {
 		} else {
 			cols = append(cols, "*")
 		}
-		q := db.Select(cols...).From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: id})
+		sq := db.Select(cols...).From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: c.Param("id")})
 		if cfg.Debug {
-			log.Println(q.Build().SQL(), fmt.Sprintf("#%v", q.Build().Params()))
+			log.Println(sq.Build().SQL(), fmt.Sprintf("#%v", sq.Build().Params()))
 		}
 		row := dbx.NullStringMap{}
-		err := q.One(row)
+		err := sq.One(row)
 		if err == nil {
 			data := make(map[string]interface{})
 			for name, v := range row {
