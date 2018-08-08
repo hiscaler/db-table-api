@@ -102,21 +102,21 @@ func parseTable(table string) string {
 		}
 	}
 
-	// 获取主键
-	var tk = struct {
+	// 获取主键以及表的所有列名称
+	tk := struct {
 		Column_name string
 	}{
 		Column_name: cfg.DefaultPrimaryKeyName,
 	}
-	db.NewQuery(fmt.Sprintf("SHOW KEYS FROM %v WHERE Key_name = 'PRIMARY'", table)).Row(&tk)
-	cfg.table.PrimaryKey = tk.Column_name
-
-	// 获取表的所有列名称
 	columns := make([]string, 0)
+
 	switch strings.ToLower(cfg.Driver) {
 	case "mysql":
 		db.NewQuery(fmt.Sprintf("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v'", cfg.database, table)).Column(&columns)
+		db.NewQuery(fmt.Sprintf("SHOW KEYS FROM %v WHERE Key_name = 'PRIMARY'", table)).Row(&tk)
 	}
+
+	cfg.table.PrimaryKey = tk.Column_name
 	if len(columns) > 0 {
 		cfg.table.Columns = columns
 	}
