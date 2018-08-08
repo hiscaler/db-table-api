@@ -416,8 +416,31 @@ func main() {
 	api.Get(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
+
+		// Select columns process
+		cols := make([]string, 0)
+		fields := c.Query("fields")
+		if len(fields) > 0 {
+			if len(cfg.table.Columns) > 0 {
+				for _, v := range strings.Split(fields, ",") {
+					for _, name := range cfg.table.Columns {
+						if v == name {
+							cols = append(cols, v)
+						}
+					}
+				}
+			} else {
+				cols = strings.Split(fields, ",")
+			}
+		} else {
+			cols = append(cols, "*")
+		}
+		q := db.Select(cols...).From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: id})
+		if cfg.Debug {
+			log.Println(q.Build().SQL(), fmt.Sprintf("#%v", q.Build().Params()))
+		}
 		row := dbx.NullStringMap{}
-		err := db.Select().From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: id}).One(row)
+		err := q.One(row)
 		if err == nil {
 			data := make(map[string]interface{})
 			for name, v := range row {
