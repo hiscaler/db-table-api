@@ -102,10 +102,8 @@ func parseTable(table string) string {
 
 	// 获取主键
 	var tk = struct {
-		Table       string
 		Column_name string
 	}{
-		Table:       table,
 		Column_name: cfg.DefaultPrimaryKeyName,
 	}
 	db.NewQuery(fmt.Sprintf("SHOW KEYS FROM %v WHERE Key_name = 'PRIMARY'", table)).Row(&tk)
