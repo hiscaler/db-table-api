@@ -370,7 +370,6 @@ func main() {
 						continue
 					}
 
-					v1 := v.String
 					// Process boolean value
 					toBool := false
 					for _, v := range cfg.table.booleanFields {
@@ -385,9 +384,9 @@ func main() {
 					}
 
 					if toBool {
-						t[name] = toBoolean(v1)
+						t[name] = toBoolean(v.String)
 					} else {
-						t[name] = v1
+						t[name] = v.String
 					}
 				}
 				d.Items = append(d.Items, t)
@@ -469,7 +468,6 @@ func main() {
 					continue
 				}
 
-				v1 := v.String
 				// Process boolean value
 				toBool := false
 				for _, v := range cfg.table.booleanFields {
@@ -484,9 +482,9 @@ func main() {
 				}
 
 				if toBool {
-					data[name] = toBoolean(v1)
+					data[name] = toBoolean(v.String)
 				} else {
-					data[name] = v1
+					data[name] = v.String
 				}
 			}
 			resp := &response.SuccessOneResponse{
