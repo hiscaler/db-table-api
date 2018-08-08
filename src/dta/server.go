@@ -497,20 +497,38 @@ func main() {
 	api.Put(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
+		sq := db.Select().From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: id})
+		if cfg.Debug {
+			log.Println(sq.Build().SQL(), fmt.Sprintf("#%v", sq.Build().Params()))
+		}
 		row := dbx.NullStringMap{}
-		primaryKey := cfg.table.PrimaryKey
-		err := db.Select().From(table).Where(dbx.HashExp{primaryKey: id}).One(row)
+		err := sq.One(row)
 		if err == nil {
 			c.Request.ParseForm()
 			columns := make(dbx.Params)
 			for k, v := range c.Request.PostForm {
-				if k == primaryKey {
+				if k == cfg.table.PrimaryKey {
 					continue
 				}
-				vv := v[0]
-				columns[k] = vv
+				if len(cfg.table.Columns) > 0 {
+					found := false
+					for _, name := range cfg.table.Columns {
+						if k == name {
+							found = true
+						}
+					}
+					if !found {
+						continue
+					}
+				}
+
+				columns[k] = v[0]
 			}
-			_, ok := db.Update(table, columns, dbx.HashExp{primaryKey: id}).Execute()
+			q := db.Update(table, columns, dbx.HashExp{cfg.table.PrimaryKey: id})
+			if cfg.Debug {
+				log.Println(sq.Build().SQL(), columns, fmt.Sprintf("#%v", sq.Build().Params()))
+			}
+			_, ok := q.Execute()
 			if ok == nil {
 				data := make(map[string]interface{})
 				resp := &response.SuccessOneResponse{
@@ -545,7 +563,11 @@ func main() {
 	api.Delete(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
-		result, err := db.Delete(table, dbx.HashExp{cfg.table.PrimaryKey: id}).Execute()
+		q := db.Delete(table, dbx.HashExp{cfg.table.PrimaryKey: id})
+		if cfg.Debug {
+			log.Println(q.SQL(), fmt.Sprintf("#%v", q.Params()))
+		}
+		result, err := q.Execute()
 		if err == nil {
 			rowsAffected, _ := result.RowsAffected()
 			if rowsAffected > 0 {
