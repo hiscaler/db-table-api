@@ -26,6 +26,12 @@ var (
 	db  *dbx.DB
 )
 
+// Current table information
+type Table struct {
+	PrimaryKey string
+	Columns    []string
+}
+
 type Config struct {
 	Debug                 bool
 	ListenPort            string
@@ -33,6 +39,7 @@ type Config struct {
 	DSN                   string
 	database              string
 	tables                []string
+	table                 Table // Table info
 	TablePrefix           string
 	DefaultPrimaryKeyName string // 默认主键名称
 	FieldNameFormat       string
@@ -93,11 +100,7 @@ func parseTable(table string) string {
 		}
 	}
 
-	return table
-}
-
-// 获取数据表主键
-func getPrimaryKeyName(table string) string {
+	// 获取主键
 	var tk = struct {
 		Table       string
 		Column_name string
@@ -106,23 +109,19 @@ func getPrimaryKeyName(table string) string {
 		Column_name: cfg.DefaultPrimaryKeyName,
 	}
 	db.NewQuery(fmt.Sprintf("SHOW KEYS FROM %v WHERE Key_name = 'PRIMARY'", table)).Row(&tk)
+	cfg.table.PrimaryKey = tk.Column_name
 
-	return tk.Column_name
-}
-
-// 获取表字段名称
-func getTableColumnNames(table string) ([]string, error) {
-	names := make([]string, 0)
+	// 获取表的所有列名称
+	columns := make([]string, 0)
 	switch strings.ToLower(cfg.Driver) {
 	case "mysql":
-		db.NewQuery(fmt.Sprintf("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v'", cfg.database, table)).Column(&names)
+		db.NewQuery(fmt.Sprintf("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '%v' AND `TABLE_NAME` = '%v'", cfg.database, table)).Column(&columns)
+	}
+	if len(columns) > 0 {
+		cfg.table.Columns = columns
 	}
 
-	if len(names) > 0 {
-		return names, nil
-	} else {
-		return names, errors.New("Not Implement")
-	}
+	return table
 }
 
 type InvalidConfig struct {
@@ -269,16 +268,15 @@ func main() {
 		}
 
 		// Build database query conditions
-		fieldNames, _ := getTableColumnNames(table)
 		exp := dbx.HashExp{}
 		for k, item := range c.Request.URL.Query() {
 			if k == "page" || k == "pageSize" {
 				continue
 			}
 
-			if len(fieldNames) > 0 {
+			if len(cfg.table.Columns) > 0 {
 				found := false
-				for _, name := range fieldNames {
+				for _, name := range cfg.table.Columns {
 					if k == name {
 						found = true
 						break
@@ -310,9 +308,9 @@ func main() {
 		cols := make([]string, 0)
 		fields := c.Query("fields")
 		if len(fields) > 0 {
-			if len(fieldNames) > 0 {
+			if len(cfg.table.Columns) > 0 {
 				for _, v := range strings.Split(fields, ",") {
-					for _, name := range fieldNames {
+					for _, name := range cfg.table.Columns {
 						if v == name {
 							cols = append(cols, v)
 						}
@@ -416,7 +414,7 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		err := db.Select().From(table).Where(dbx.HashExp{getPrimaryKeyName(table): id}).One(row)
+		err := db.Select().From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: id}).One(row)
 		if err == nil {
 			data := make(map[string]interface{})
 			booleanFields := make([]string, 0)
@@ -485,7 +483,7 @@ func main() {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
 		row := dbx.NullStringMap{}
-		primaryKey := getPrimaryKeyName(table)
+		primaryKey := cfg.table.PrimaryKey
 		err := db.Select().From(table).Where(dbx.HashExp{primaryKey: id}).One(row)
 		if err == nil {
 			c.Request.ParseForm()
@@ -532,7 +530,7 @@ func main() {
 	api.Delete(`/<table:\w+>/<id:\d+>`, func(c *routing.Context) error {
 		table := parseTable(c.Param("table"))
 		id := c.Param("id")
-		result, err := db.Delete(table, dbx.HashExp{getPrimaryKeyName(table): id}).Execute()
+		result, err := db.Delete(table, dbx.HashExp{cfg.table.PrimaryKey: id}).Execute()
 		if err == nil {
 			rowsAffected, _ := result.RowsAffected()
 			if rowsAffected > 0 {
