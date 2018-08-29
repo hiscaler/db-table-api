@@ -617,5 +617,8 @@ func main() {
 	if len(addr) == 0 {
 		addr = "8080"
 	}
-	http.ListenAndServe(":"+addr, nil)
+	err := http.ListenAndServe(":"+addr, nil)
+	if err != nil {
+		log.Println(err)
+	}
 }
