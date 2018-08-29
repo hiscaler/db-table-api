@@ -8,7 +8,7 @@ type BaseResponse struct {
 	Success bool `json:"success"`
 }
 
-// {'success': false, 'error': {'message': "error message"}}
+// {"success": false, "error": {"message": "error message"}}
 type FailResponse struct {
 	Success bool  `json:"success"`
 	Error   Error `json:"error"`
@@ -19,7 +19,7 @@ type SuccessListData struct {
 	Meta  map[string]int64 `json:"_meta"`
 }
 
-// {'success': true, data: {"items": [{...}, {...}], "_meta": {"totalPage": 1}}}
+// {"success": true, data: {"items": [{...}, {...}], "_meta": {"totalPage": 1}}}
 type SuccessListResponse struct {
 	Success bool            `json:"success"`
 	Data    SuccessListData `json:"data"`
