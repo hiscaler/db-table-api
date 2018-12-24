@@ -253,7 +253,7 @@ func main() {
 		}
 		q := db.Insert(table, columns)
 		if cfg.Debug {
-			log.Println(q.SQL(), columns, fmt.Sprintf("#%v", q.Params()))
+			log.Println(q.SQL(), columns, fmt.Sprintf("%+v", q.Params()))
 		}
 		result, err := q.Execute()
 		if err == nil {
@@ -348,7 +348,7 @@ func main() {
 		totalPages := (totalCount + pageSize - 1) / pageSize
 		sq.Select(cols...).Offset((page - 1) * pageSize).Limit(pageSize)
 		if cfg.Debug {
-			log.Println(sq.Build().SQL(), fmt.Sprintf("#%v", sq.Build().Params()))
+			log.Println(sq.Build().SQL(), fmt.Sprintf("%+v", sq.Build().Params()))
 		}
 		rows, err := sq.Rows()
 		if err == nil {
@@ -450,7 +450,7 @@ func main() {
 		}
 		sq := db.Select(cols...).From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: c.Param("id")})
 		if cfg.Debug {
-			log.Println(sq.Build().SQL(), fmt.Sprintf("#%v", sq.Build().Params()))
+			log.Println(sq.Build().SQL(), fmt.Sprintf("%+v", sq.Build().Params()))
 		}
 		row := dbx.NullStringMap{}
 		err := sq.One(row)
@@ -511,7 +511,7 @@ func main() {
 		id := c.Param("id")
 		sq := db.Select().From(table).Where(dbx.HashExp{cfg.table.PrimaryKey: id})
 		if cfg.Debug {
-			log.Println(sq.Build().SQL(), fmt.Sprintf("#%v", sq.Build().Params()))
+			log.Println(sq.Build().SQL(), fmt.Sprintf("%+v", sq.Build().Params()))
 		}
 		row := dbx.NullStringMap{}
 		err := sq.One(row)
@@ -538,7 +538,7 @@ func main() {
 			}
 			q := db.Update(table, columns, dbx.HashExp{cfg.table.PrimaryKey: id})
 			if cfg.Debug {
-				log.Println(sq.Build().SQL(), columns, fmt.Sprintf("#%v", sq.Build().Params()))
+				log.Println(sq.Build().SQL(), columns, fmt.Sprintf("%+v", sq.Build().Params()))
 			}
 			_, ok := q.Execute()
 			if ok == nil {
@@ -577,7 +577,7 @@ func main() {
 		id := c.Param("id")
 		q := db.Delete(table, dbx.HashExp{cfg.table.PrimaryKey: id})
 		if cfg.Debug {
-			log.Println(q.SQL(), fmt.Sprintf("#%v", q.Params()))
+			log.Println(q.SQL(), fmt.Sprintf("%+v", q.Params()))
 		}
 		result, err := q.Execute()
 		if err == nil {
