@@ -156,7 +156,7 @@ func loadConfig() (*Config, error) {
 		toCamel:               false,
 		DefaultPrimaryKeyName: "id",
 	}
-	filePath := "src/dta/config/conf.json"
+	filePath := "./config/conf.json"
 	jsonFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, &InvalidConfig{file: filePath}
