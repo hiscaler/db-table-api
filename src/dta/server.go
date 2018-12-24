@@ -262,7 +262,7 @@ func main() {
 			data = columns
 			data["id"] = lastInsertId
 			resp := &response.SuccessOneResponse{
-				Success: false,
+				Success: true,
 				Data:    data,
 			}
 			return c.Write(resp)
