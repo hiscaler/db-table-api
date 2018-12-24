@@ -14,11 +14,11 @@ GET http://127.0.0.1:8080/api/ping
 服务正常的话，则会返回 "OK" 字符串。
 ## 数据操作
 
-A. 访问接口列表接口获取数据列表
+A. 获取数据列表
 ```url
 GET http://127.0.0.1:8080/api/you-access-table-name?page=1&pageSize=10
 ```
-B. 访问单条数据，则输入以下地址访问
+B. 获取某条数据详情
 ```url
 GET http://127.0.0.1:8080/api/you-access-table-name/PK
 ```
